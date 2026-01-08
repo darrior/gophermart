@@ -1,0 +1,20 @@
+package handlers
+
+import "github.com/go-chi/chi/v5"
+
+func (s *server) setRoutes() {
+	s.mux.Route("/api/usr", func(r chi.Router) {
+		r.Post("/register", s.h.postAPIUserRegister)
+		r.Post("/login", s.h.postAPIUserLogin)
+
+		r.Group(func(r chi.Router) {
+			r.Use(authMiddlware)
+
+			r.Post("/orders", s.h.postAPIUserOrders)
+			r.Post("balance/withdraw", s.h.postAPIUserBalanceWithdrew)
+			r.Get("/orders", s.h.getAPIUserOrders)
+			r.Get("/balance", s.h.getAPIUserBalance)
+			r.Get("/withdrawals", s.h.getAPIUserWithdrawals)
+		})
+	})
+}
