@@ -1,29 +1,29 @@
 package models
 
-type AuthenticationData struct {
+type AuthenticationDataRequest struct {
 	Login    string `json:"string"`
 	Password string `json:"password"`
 }
 
-type Order struct {
-	Number     string `json:"number"`
-	Status     string `json:"status"`
-	Accrual    int    `json:"accural"`
-	UploadedAt string `json:"uploaded_at"`
+type OrderResponse struct {
+	Number     string      `json:"number"`
+	Status     OrderStatus `json:"status"`
+	Accrual    int         `json:"accural"`
+	UploadedAt string      `json:"uploaded_at"`
 }
 
-type Balance struct {
-	Current   string `json:"current"`
-	Withdrawn string `json:"withdrawn"`
+type BalanceResponse struct {
+	Current   float64 `json:"current"`
+	Withdrawn float64 `json:"withdrawn"`
 }
 
 type WithdrawRequest struct {
-	Order string `json:"string"`
-	Sum   int    `json:"sum"`
+	Order string  `json:"string"`
+	Sum   float64 `json:"sum"`
 }
 
-type Withdraw struct {
-	Order       string `json:"string"`
-	Sum         int    `json:"sum"`
-	ProcessedAt string `json:"processed_at"`
+type WithdrawResponse struct {
+	Order       string  `json:"string"`
+	Sum         float64 `json:"sum"`
+	ProcessedAt string  `json:"processed_at"`
 }

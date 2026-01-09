@@ -18,10 +18,10 @@ type Service interface {
 	RegisterUser(login, password string) (uuid string, err error)
 	LoginUser(login, password string) (uuid string, err error)
 	AddOrder(uuid, order string) (err error)
-	Withdraw(uuid, order string, sum int) (err error)
-	ListOrders(uuid string) (orders []models.Order, err error)
-	ListWithdrawals(uuid string) (withdrawals []models.Withdraw, err error)
-	GetBalance(uuid string) (balance models.Balance, err error)
+	Withdraw(uuid, order string, sum float64) (err error)
+	ListOrders(uuid string) (orders []models.OrderResponse, err error)
+	ListWithdrawals(uuid string) (withdrawals []models.WithdrawResponse, err error)
+	GetBalance(uuid string) (balance models.BalanceResponse, err error)
 }
 
 type handlers struct {
@@ -34,7 +34,7 @@ func (h *handlers) postAPIUserRegister(w http.ResponseWriter, req *http.Request)
 		return
 	}
 
-	var data models.AuthenticationData
+	var data models.AuthenticationDataRequest
 	d := json.NewDecoder(req.Body)
 	if err := d.Decode(&data); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -68,7 +68,7 @@ func (h *handlers) postAPIUserLogin(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var data models.AuthenticationData
+	var data models.AuthenticationDataRequest
 	d := json.NewDecoder(req.Body)
 	if err := d.Decode(&data); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
