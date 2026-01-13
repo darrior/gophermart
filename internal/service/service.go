@@ -22,7 +22,7 @@ var (
 
 type Repository interface {
 	AddUser(ctx context.Context, uuid, login, passHash string) (err error)
-	AddOrder(ctx context.Context, uuid, number string) (err error)
+	AddOrder(ctx context.Context, uuid, number string, timestamp time.Time) (err error)
 	AddWithdrawal(ctx context.Context, uuid, number string, balance, sum float64, time time.Time) (err error)
 	GetOrder(ctx context.Context, number string) (order models.Order, err error)
 	GetUser(ctx context.Context, uuid string) (user models.User, err error)
@@ -74,16 +74,14 @@ func (s *service) LoginUser(ctx context.Context, login, password string) (string
 }
 
 func (s *service) AddOrder(ctx context.Context, uuid, order string) error {
-	if o, err := s.repository.GetOrder(ctx, order); err == nil {
-		if o.UserUUID == uuid {
+	var order_exists *repository.ErrorOrderExists
+	if err := s.repository.AddOrder(ctx, uuid, order, time.Now()); errors.As(err, &order_exists) {
+		if order_exists.UUID == uuid {
 			return ErrOrderAlreadyExists
+		} else {
+			return ErrOrderOwnedByOtherUser
 		}
-		return ErrOrderOwnedByOtherUser
-	} else if !errors.Is(err, repository.ErrOrderNotFound) {
-		return fmt.Errorf("cannot get order from repository: %w", err)
-	}
-
-	if err := s.repository.AddOrder(ctx, uuid, order); err != nil {
+	} else if err != nil {
 		return fmt.Errorf("cannot add order to repository: %w", err)
 	}
 
