@@ -12,24 +12,25 @@ const (
 )
 
 type User struct {
-	UUID             string
-	Login            string
-	PasswordHash     string
-	CurrentBalance   float64
-	WithdrawnBalance float64
+	UUID             string  `db:"id"`
+	Login            string  `db:"login"`
+	PasswordHash     string  `db:"password_hash"`
+	CurrentBalance   float64 `db:"current_balance"`
+	WithdrawnBalance float64 `db:"withdrawan_balance"`
 }
 
 type Order struct {
-	UserUUID   string
-	Accural    int
-	Number     string
-	Status     OrderStatus
-	UploadedAt time.Time
+	UserUUID   string      `db:"user_uuid"`
+	Accural    float64     `db:"accural"`
+	Number     string      `db:"number"`
+	Status     OrderStatus `db:"status"`
+	UploadedAt time.Time   `db:"uploaded_at"`
 }
 
 type Withdrawal struct {
-	UserUUID    string
-	Order       string
-	Sum         float64
-	ProcessedAt time.Time
+	ID          int       `db:"id"`
+	UserUUID    string    `db:"user_uuid"`
+	Order       string    `db:"order"`
+	Sum         float64   `db:"sum"`
+	ProcessedAt time.Time `db:"processed_at"`
 }
