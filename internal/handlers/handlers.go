@@ -2,6 +2,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -15,13 +16,13 @@ import (
 )
 
 type Service interface {
-	RegisterUser(login, password string) (uuid string, err error)
-	LoginUser(login, password string) (uuid string, err error)
-	AddOrder(uuid, order string) (err error)
-	Withdraw(uuid, order string, sum float64) (err error)
-	ListOrders(uuid string) (orders []models.OrderResponse, err error)
-	ListWithdrawals(uuid string) (withdrawals []models.WithdrawResponse, err error)
-	GetBalance(uuid string) (balance models.BalanceResponse, err error)
+	RegisterUser(ctx context.Context, login, password string) (uuid string, err error)
+	LoginUser(ctx context.Context, login, password string) (uuid string, err error)
+	AddOrder(ctx context.Context, uuid, order string) (err error)
+	Withdraw(ctx context.Context, uuid, order string, sum float64) (err error)
+	ListOrders(ctx context.Context, uuid string) (orders []models.OrderResponse, err error)
+	ListWithdrawals(ctx context.Context, uuid string) (withdrawals []models.WithdrawResponse, err error)
+	GetBalance(ctx context.Context, uuid string) (balance models.BalanceResponse, err error)
 }
 
 type handlers struct {
@@ -46,7 +47,8 @@ func (h *handlers) postAPIUserRegister(w http.ResponseWriter, req *http.Request)
 		}
 	}()
 
-	uuid, err := h.s.RegisterUser(data.Login, data.Password)
+	ctx := req.Context()
+	uuid, err := h.s.RegisterUser(ctx, data.Login, data.Password)
 	if errors.Is(err, service.ErrLoginExists) {
 		http.Error(w, err.Error(), http.StatusConflict)
 		return
@@ -80,7 +82,8 @@ func (h *handlers) postAPIUserLogin(w http.ResponseWriter, req *http.Request) {
 		}
 	}()
 
-	uuid, err := h.s.LoginUser(data.Login, data.Password)
+	ctx := req.Context()
+	uuid, err := h.s.LoginUser(ctx, data.Login, data.Password)
 	if errors.Is(err, service.ErrInvalidCredentials) {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -125,8 +128,9 @@ func (h *handlers) postAPIUserOrders(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	ctx := req.Context()
 	uuid := rawUUID.(string)
-	if err := h.s.AddOrder(uuid, order); errors.Is(err, service.ErrOrderAlreadyExists) {
+	if err := h.s.AddOrder(ctx, uuid, order); errors.Is(err, service.ErrOrderAlreadyExists) {
 		w.WriteHeader(http.StatusOK)
 		return
 	} else if errors.Is(err, service.ErrOrderOwnedByOtherUser) {
@@ -147,8 +151,9 @@ func (h *handlers) getAPIUserOrders(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	ctx := req.Context()
 	uuid := rawUUID.(string)
-	orders, err := h.s.ListOrders(uuid)
+	orders, err := h.s.ListOrders(ctx, uuid)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -180,8 +185,9 @@ func (h *handlers) getAPIUserBalance(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	ctx := req.Context()
 	uuid := rawUUID.(string)
-	balance, err := h.s.GetBalance(uuid)
+	balance, err := h.s.GetBalance(ctx, uuid)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -230,8 +236,9 @@ func (h *handlers) postAPIUserBalanceWithdrew(w http.ResponseWriter, req *http.R
 		return
 	}
 
+	ctx := req.Context()
 	uuid := rawUUID.(string)
-	if err := h.s.Withdraw(uuid, data.Order, data.Sum); errors.Is(err, service.ErrInsufficientFunds) {
+	if err := h.s.Withdraw(ctx, uuid, data.Order, data.Sum); errors.Is(err, service.ErrInsufficientFunds) {
 		http.Error(w, err.Error(), http.StatusPaymentRequired)
 		return
 	} else if err != nil {
@@ -249,8 +256,9 @@ func (h *handlers) getAPIUserWithdrawals(w http.ResponseWriter, req *http.Reques
 		return
 	}
 
+	ctx := req.Context()
 	uuid := rawUUID.(string)
-	withdrawals, err := h.s.ListWithdrawals(uuid)
+	withdrawals, err := h.s.ListWithdrawals(ctx, uuid)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

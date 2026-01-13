@@ -2,6 +2,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -20,14 +21,14 @@ var (
 )
 
 type Repository interface {
-	AddUser(uuid, login, passHash string) (err error)
-	AddOrder(uuid, number string) (err error)
-	AddWithdrawal(uuid, number string, balance, sum float64, time time.Time) (err error)
-	GetOrder(number string) (order models.Order, err error)
-	GetUser(uuid string) (user models.User, err error)
-	GetUserByLogin(login string) (user models.User, err error)
-	ListOrders(uuid string) (orders []models.Order, err error)
-	ListWithdrawals(uuid string) (withdrawals []models.Withdrawal, err error)
+	AddUser(ctx context.Context, uuid, login, passHash string) (err error)
+	AddOrder(ctx context.Context, uuid, number string) (err error)
+	AddWithdrawal(ctx context.Context, uuid, number string, balance, sum float64, time time.Time) (err error)
+	GetOrder(ctx context.Context, number string) (order models.Order, err error)
+	GetUser(ctx context.Context, uuid string) (user models.User, err error)
+	GetUserByLogin(ctx context.Context, login string) (user models.User, err error)
+	ListOrders(ctx context.Context, uuid string) (orders []models.Order, err error)
+	ListWithdrawals(ctx context.Context, uuid string) (withdrawals []models.Withdrawal, err error)
 }
 
 type service struct {
@@ -38,8 +39,8 @@ func NewService(r Repository) *service {
 	return &service{repository: r}
 }
 
-func (s *service) RegisterUser(login, password string) (string, error) {
-	if _, err := s.repository.GetUserByLogin(login); err == nil {
+func (s *service) RegisterUser(ctx context.Context, login, password string) (string, error) {
+	if _, err := s.repository.GetUserByLogin(ctx, login); err == nil {
 		return "", ErrLoginExists
 	} else if !errors.Is(err, repository.ErrUserNotFound) {
 		return "", fmt.Errorf("cannot get user: %w", err)
@@ -51,15 +52,15 @@ func (s *service) RegisterUser(login, password string) (string, error) {
 	}
 
 	passHash := getPasswordHash(password)
-	if err := s.repository.AddUser(userUUID.String(), login, passHash); err != nil {
+	if err := s.repository.AddUser(ctx, userUUID.String(), login, passHash); err != nil {
 		return "", fmt.Errorf("cannot add new user: %w", err)
 	}
 
 	return userUUID.String(), nil
 }
 
-func (s *service) LoginUser(login, password string) (string, error) {
-	user, err := s.repository.GetUserByLogin(login)
+func (s *service) LoginUser(ctx context.Context, login, password string) (string, error) {
+	user, err := s.repository.GetUserByLogin(ctx, login)
 	if errors.Is(err, repository.ErrUserNotFound) {
 		return "", ErrInvalidCredentials
 	}
@@ -72,8 +73,8 @@ func (s *service) LoginUser(login, password string) (string, error) {
 	return user.UUID, nil
 }
 
-func (s *service) AddOrder(uuid, order string) error {
-	if o, err := s.repository.GetOrder(order); err == nil {
+func (s *service) AddOrder(ctx context.Context, uuid, order string) error {
+	if o, err := s.repository.GetOrder(ctx, order); err == nil {
 		if o.UserUUID == uuid {
 			return ErrOrderAlreadyExists
 		}
@@ -82,15 +83,15 @@ func (s *service) AddOrder(uuid, order string) error {
 		return fmt.Errorf("cannot get order from repository: %w", err)
 	}
 
-	if err := s.repository.AddOrder(uuid, order); err != nil {
+	if err := s.repository.AddOrder(ctx, uuid, order); err != nil {
 		return fmt.Errorf("cannot add order to repository: %w", err)
 	}
 
 	return nil
 }
 
-func (s *service) Withdraw(uuid, order string, sum float64) error {
-	user, err := s.repository.GetUser(uuid)
+func (s *service) Withdraw(ctx context.Context, uuid, order string, sum float64) error {
+	user, err := s.repository.GetUser(ctx, uuid)
 	if err != nil {
 		return fmt.Errorf("cannot get user: %w", err)
 	}
@@ -100,15 +101,15 @@ func (s *service) Withdraw(uuid, order string, sum float64) error {
 	}
 
 	balance := user.CurrentBalance - sum
-	if err := s.repository.AddWithdrawal(uuid, order, balance, sum, time.Now()); err != nil {
+	if err := s.repository.AddWithdrawal(ctx, uuid, order, balance, sum, time.Now()); err != nil {
 		return fmt.Errorf("cannot store withdraw: %w", err)
 	}
 
 	return nil
 }
 
-func (s *service) ListOrders(uuid string) ([]models.OrderResponse, error) {
-	orders, err := s.repository.ListOrders(uuid)
+func (s *service) ListOrders(ctx context.Context, uuid string) ([]models.OrderResponse, error) {
+	orders, err := s.repository.ListOrders(ctx, uuid)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get orders from repository: %w", err)
 	}
@@ -126,8 +127,8 @@ func (s *service) ListOrders(uuid string) ([]models.OrderResponse, error) {
 	return ret, nil
 }
 
-func (s *service) ListWithdrawals(uuid string) ([]models.WithdrawResponse, error) {
-	withdrawals, err := s.repository.ListWithdrawals(uuid)
+func (s *service) ListWithdrawals(ctx context.Context, uuid string) ([]models.WithdrawResponse, error) {
+	withdrawals, err := s.repository.ListWithdrawals(ctx, uuid)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get user from repository: %w", err)
 	}
@@ -144,8 +145,8 @@ func (s *service) ListWithdrawals(uuid string) ([]models.WithdrawResponse, error
 	return ret, nil
 }
 
-func (s *service) GetBalance(uuid string) (models.BalanceResponse, error) {
-	user, err := s.repository.GetUser(uuid)
+func (s *service) GetBalance(ctx context.Context, uuid string) (models.BalanceResponse, error) {
+	user, err := s.repository.GetUser(ctx, uuid)
 	if err != nil {
 		return models.BalanceResponse{}, fmt.Errorf("cannot get user from repository: %w", err)
 	}
