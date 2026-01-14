@@ -5,12 +5,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
+	"github.com/darrior/gophermart/internal/gateways/accrual"
 	"github.com/darrior/gophermart/internal/models"
 	"github.com/darrior/gophermart/internal/repository"
+	"github.com/darrior/gophermart/internal/utils/syncqueue"
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 )
+
+const defaultDelay = time.Millisecond * 10
 
 var (
 	ErrLoginExists           = errors.New("login already exists")
@@ -24,6 +30,8 @@ type Repository interface {
 	AddUser(ctx context.Context, uuid, login, passHash string) (err error)
 	AddOrder(ctx context.Context, uuid, number string, timestamp time.Time) (err error)
 	AddWithdrawal(ctx context.Context, uuid, number string, balance, sum float64, time time.Time) (err error)
+	UpdateOrderStatus(ctx context.Context, number string, status models.OrderStatus) (err error)
+	UpdateOrder(ctx context.Context, order models.Order) (err error)
 	GetOrder(ctx context.Context, number string) (order models.Order, err error)
 	GetUser(ctx context.Context, uuid string) (user models.User, err error)
 	GetUserByLogin(ctx context.Context, login string) (user models.User, err error)
@@ -38,6 +46,12 @@ type AccrualSystem interface {
 type service struct {
 	repository    Repository
 	accrualSystem AccrualSystem
+	orderCfg      struct {
+		orderWorkers int
+		orderQueue   *syncqueue.SyncQueue[string]
+		orderWait    chan struct{}
+		orderCond    *sync.Cond
+	}
 }
 
 func NewService(r Repository) *service {
@@ -173,4 +187,83 @@ func (s *service) GetPasswordHash(ctx context.Context, uuid string) (string, err
 	}
 
 	return user.PasswordHash, nil
+}
+
+func (s *service) pushOrder(number string) {
+	s.orderCfg.orderQueue.Push(number)
+	s.orderCfg.orderCond.Signal()
+}
+
+func (s *service) startWorkers(ctx context.Context) {
+	go func() {
+		t := time.NewTicker(60 * time.Second)
+
+	loop:
+		for {
+			select {
+			case <-ctx.Done():
+				break loop
+			case <-t.C:
+			}
+
+			wg := sync.WaitGroup{}
+
+			for range s.orderCfg.orderWorkers {
+				wg.Go(func() { s.workerOrder(ctx) })
+			}
+
+			wg.Wait()
+			t.Reset(60 * time.Second)
+		}
+	}()
+}
+
+func (s *service) updateOrder(ctx context.Context, order models.AccrualOrderState) error {
+	switch order.Status {
+	case models.AccrualOrderStatusRegistered:
+		if err := s.repository.UpdateOrderStatus(ctx, order.Order, models.OrderStatusNew); err != nil {
+			return fmt.Errorf("cannot update order status: %w", err)
+		}
+	case models.AccrualOrderStatusProcessing:
+	case models.AccrualOrderStatusInvalid:
+	case models.AccrualOrderStatusProcessed:
+	}
+
+	return nil
+}
+
+func (s *service) workerOrder(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-s.orderCfg.orderWait:
+		}
+
+		number, ok := s.orderCfg.orderQueue.Pop()
+		if !ok {
+			s.orderCfg.orderCond.L.Lock()
+			for s.orderCfg.orderQueue.IsEmpty() {
+				s.orderCfg.orderCond.Wait()
+			}
+			s.orderCfg.orderCond.L.Unlock()
+			continue
+		}
+
+		order, err := s.accrualSystem.GetOrder(number)
+		if errors.Is(err, accrual.ErrTooManyRequests) {
+			s.orderCfg.orderQueue.Push(number)
+			break
+		} else if errors.Is(err, accrual.ErrOrderIsNotExist) {
+			s.orderCfg.orderQueue.Push(number)
+			continue
+		} else if err != nil {
+			log.Error().Err(err).Msg("An error occured in accrual system")
+			continue
+		}
+
+		if err := s.updateOrder(ctx, order); err != nil {
+			log.Error().Err(err).Msg("Cannot update order")
+		}
+	}
 }
