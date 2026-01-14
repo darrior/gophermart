@@ -31,8 +31,13 @@ type Repository interface {
 	ListWithdrawals(ctx context.Context, uuid string) (withdrawals []models.Withdrawal, err error)
 }
 
+type AccrualSystem interface {
+	GetOrder(number string) (order models.AccrualOrderState, err error)
+}
+
 type service struct {
-	repository Repository
+	repository    Repository
+	accrualSystem AccrualSystem
 }
 
 func NewService(r Repository) *service {
