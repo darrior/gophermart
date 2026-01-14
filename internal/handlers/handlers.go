@@ -16,13 +16,14 @@ import (
 )
 
 type Service interface {
-	RegisterUser(ctx context.Context, login, password string) (uuid string, err error)
-	LoginUser(ctx context.Context, login, password string) (uuid string, err error)
+	RegisterUser(ctx context.Context, login, password string) (user models.User, err error)
+	LoginUser(ctx context.Context, login, password string) (user models.User, err error)
 	AddOrder(ctx context.Context, uuid, order string) (err error)
 	Withdraw(ctx context.Context, uuid, order string, sum float64) (err error)
 	ListOrders(ctx context.Context, uuid string) (orders []models.OrderResponse, err error)
 	ListWithdrawals(ctx context.Context, uuid string) (withdrawals []models.WithdrawResponse, err error)
 	GetBalance(ctx context.Context, uuid string) (balance models.BalanceResponse, err error)
+	GetPasswordHash(ctx context.Context, uuid string) (passHash string, err error)
 }
 
 type handlers struct {
@@ -48,7 +49,7 @@ func (h *handlers) postAPIUserRegister(w http.ResponseWriter, req *http.Request)
 	}()
 
 	ctx := req.Context()
-	uuid, err := h.s.RegisterUser(ctx, data.Login, data.Password)
+	user, err := h.s.RegisterUser(ctx, data.Login, data.Password)
 	if errors.Is(err, service.ErrLoginExists) {
 		http.Error(w, err.Error(), http.StatusConflict)
 		return
@@ -57,7 +58,7 @@ func (h *handlers) postAPIUserRegister(w http.ResponseWriter, req *http.Request)
 		return
 	}
 
-	if err := setAuthCookie(w, data.Password, uuid); err != nil {
+	if err := setAuthCookie(w, user.PasswordHash, user.UUID); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
@@ -83,7 +84,7 @@ func (h *handlers) postAPIUserLogin(w http.ResponseWriter, req *http.Request) {
 	}()
 
 	ctx := req.Context()
-	uuid, err := h.s.LoginUser(ctx, data.Login, data.Password)
+	user, err := h.s.LoginUser(ctx, data.Login, data.Password)
 	if errors.Is(err, service.ErrInvalidCredentials) {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -92,7 +93,7 @@ func (h *handlers) postAPIUserLogin(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := setAuthCookie(w, data.Password, uuid); err != nil {
+	if err := setAuthCookie(w, user.PasswordHash, user.UUID); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 

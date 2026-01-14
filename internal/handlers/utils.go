@@ -1,13 +1,67 @@
 package handlers
 
-import "net/http"
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/http"
+	"slices"
+	"strconv"
+	"strings"
 
-type requestContextKey int
+	"github.com/golang-jwt/jwt/v4"
+)
 
 const userUUIDKey requestContextKey = 1
 
-func setAuthCookie(w http.ResponseWriter, password, uuid string) error {
-	panic("todo")
+type requestContextKey int
+
+type authClaims struct {
+	jwt.Claims
+	userUUID string
+}
+
+func (h *handlers) validateAuthCookie(ctx context.Context, tokenString string) (string, error) {
+	var claims authClaims
+
+	token, err := jwt.ParseWithClaims(tokenString, &claims, func(t *jwt.Token) (any, error) {
+		c, ok := t.Claims.(authClaims)
+		if !ok {
+			return nil, errors.New("cannot assert token claims")
+		}
+
+		return h.s.GetPasswordHash(ctx, c.userUUID)
+	})
+	if err != nil {
+		return "", fmt.Errorf("cannot parse JWT token: %w", err)
+	}
+
+	if !token.Valid {
+		return "", fmt.Errorf("token is not valid")
+	}
+
+	return claims.userUUID, nil
+}
+
+func setAuthCookie(w http.ResponseWriter, passHash, uuid string) error {
+	claims := &authClaims{
+		userUUID: uuid,
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString(passHash)
+	if err != nil {
+		return fmt.Errorf("cannot sigh token: %w", err)
+	}
+
+	cookie := &http.Cookie{
+		Name:  authCookieName,
+		Value: tokenString,
+	}
+
+	http.SetCookie(w, cookie)
+
+	return nil
 }
 
 func validateLuhn(number string) error {

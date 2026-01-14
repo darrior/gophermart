@@ -44,38 +44,44 @@ func NewService(r Repository) *service {
 	return &service{repository: r}
 }
 
-func (s *service) RegisterUser(ctx context.Context, login, password string) (string, error) {
+func (s *service) RegisterUser(ctx context.Context, login, password string) (models.User, error) {
 	if _, err := s.repository.GetUserByLogin(ctx, login); err == nil {
-		return "", ErrLoginExists
+		return models.User{}, ErrLoginExists
 	} else if !errors.Is(err, repository.ErrUserNotFound) {
-		return "", fmt.Errorf("cannot get user: %w", err)
+		return models.User{}, fmt.Errorf("cannot get user: %w", err)
 	}
 
 	userUUID, err := uuid.NewRandom()
 	if err != nil {
-		return "", fmt.Errorf("cannot generate UUID: %w", err)
+		return models.User{}, fmt.Errorf("cannot generate UUID: %w", err)
 	}
 
 	passHash := getPasswordHash(password)
 	if err := s.repository.AddUser(ctx, userUUID.String(), login, passHash); err != nil {
-		return "", fmt.Errorf("cannot add new user: %w", err)
+		return models.User{}, fmt.Errorf("cannot add new user: %w", err)
 	}
 
-	return userUUID.String(), nil
+	return models.User{
+		UUID:             userUUID.String(),
+		Login:            login,
+		PasswordHash:     passHash,
+		CurrentBalance:   0,
+		WithdrawnBalance: 0,
+	}, nil
 }
 
-func (s *service) LoginUser(ctx context.Context, login, password string) (string, error) {
+func (s *service) LoginUser(ctx context.Context, login, password string) (models.User, error) {
 	user, err := s.repository.GetUserByLogin(ctx, login)
 	if errors.Is(err, repository.ErrUserNotFound) {
-		return "", ErrInvalidCredentials
+		return models.User{}, ErrInvalidCredentials
 	}
 
 	passHash := getPasswordHash(password)
 	if user.PasswordHash != passHash {
-		return "", ErrInvalidCredentials
+		return models.User{}, ErrInvalidCredentials
 	}
 
-	return user.UUID, nil
+	return user, nil
 }
 
 func (s *service) AddOrder(ctx context.Context, uuid, order string) error {
@@ -158,4 +164,13 @@ func (s *service) GetBalance(ctx context.Context, uuid string) (models.BalanceRe
 		Current:   user.CurrentBalance,
 		Withdrawn: user.WithdrawnBalance,
 	}, nil
+}
+
+func (s *service) GetPasswordHash(ctx context.Context, uuid string) (string, error) {
+	user, err := s.repository.GetUser(ctx, uuid)
+	if err != nil {
+		return "", fmt.Errorf("cannot get user from repository: %w", err)
+	}
+
+	return user.PasswordHash, nil
 }

@@ -8,7 +8,7 @@ func (s *server) setRoutes() {
 		r.Post("/login", s.h.postAPIUserLogin)
 
 		r.Group(func(r chi.Router) {
-			r.Use(authMiddlware)
+			r.Use(s.h.authMiddlware)
 
 			r.Post("/orders", s.h.postAPIUserOrders)
 			r.Post("balance/withdraw", s.h.postAPIUserBalanceWithdrew)
