@@ -122,7 +122,7 @@ func (s *service) ListOrders(ctx context.Context, uuid string) ([]models.OrderRe
 		ret = append(ret, models.OrderResponse{
 			Number:     order.Number,
 			Status:     order.Status,
-			Accrual:    order.Accural,
+			Accrual:    order.Accrual,
 			UploadedAt: order.UploadedAt.Format(timeLayout),
 		})
 	}

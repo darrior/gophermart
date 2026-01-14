@@ -21,7 +21,7 @@ type User struct {
 
 type Order struct {
 	UserUUID   string      `db:"user_uuid"`
-	Accural    float64     `db:"accural"`
+	Accrual    float64     `db:"accrual"`
 	Number     string      `db:"number"`
 	Status     OrderStatus `db:"status"`
 	UploadedAt time.Time   `db:"uploaded_at"`

@@ -11,7 +11,7 @@ CREATE TABLE users(
 CREATE TYPE order_status AS ENUM ('NEW', 'PROCESSING', 'INVALID', 'PROCESSED');
 CREATE TABLE orders(
     number text,
-    accural float,
+    accrual float,
     user_uuid uuid,
     status order_status,
     uploaded_at timestamp,

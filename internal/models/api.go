@@ -8,7 +8,7 @@ type AuthenticationDataRequest struct {
 type OrderResponse struct {
 	Number     string      `json:"number"`
 	Status     OrderStatus `json:"status"`
-	Accrual    float64     `json:"accural"`
+	Accrual    float64     `json:"accrual"`
 	UploadedAt string      `json:"uploaded_at"`
 }
 
