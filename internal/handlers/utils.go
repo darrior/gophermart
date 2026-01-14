@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"slices"
 	"strconv"
-	"strings"
 
 	"github.com/golang-jwt/jwt/v4"
 )
@@ -65,5 +64,32 @@ func setAuthCookie(w http.ResponseWriter, passHash, uuid string) error {
 }
 
 func validateLuhn(number string) error {
-	panic("todo")
+	runes := []rune(number)
+	slices.Reverse(runes)
+
+	sum := 0
+	for i, r := range runes {
+		if i%2 == 0 {
+			sum += i
+			continue
+		}
+
+		num, err := strconv.Atoi(string(r))
+		if err != nil {
+			return errors.New("non-digit character in number")
+		}
+
+		num = num * 2
+		if num > 9 {
+			num -= 9
+		}
+
+		sum += num
+	}
+
+	if sum%10 != 0 {
+		return errors.New("number is invalid")
+	}
+
+	return nil
 }
