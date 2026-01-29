@@ -67,7 +67,8 @@ func (r *repository) AddWithdrawal(ctx context.Context, uuid, number string, bal
 	if err != nil {
 		return fmt.Errorf("cannot start transaction: %w", err)
 	}
-	if _, err := tx.ExecContext(ctx, "UPDATE users SET balance = $1 WHERE id = $2", balance, uuid); err != nil {
+
+	if _, err := tx.ExecContext(ctx, "UPDATE users SET current_balance = $1, withdrawal_balance = withdrawal_balance + $3 WHERE id = $2", balance, uuid, sum); err != nil {
 		return fmt.Errorf("cannot update user: %w", err)
 	}
 
@@ -77,6 +78,42 @@ func (r *repository) AddWithdrawal(ctx context.Context, uuid, number string, bal
 
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("cannot complete transaction: %w", err)
+	}
+
+	return nil
+}
+
+func (r *repository) UpdateOrderStatus(ctx context.Context, number string, status models.OrderStatus) error {
+	if _, err := r.db.ExecContext(ctx, "UPDATE orders SET status = $2 WHERE id = $1", number, status); err != nil {
+		return fmt.Errorf("cannot perform update: %w", err)
+	}
+
+	return nil
+}
+
+func (r *repository) UpdateOrder(ctx context.Context, order models.Order) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("cannot start transaction: %w", err)
+	}
+
+	row := tx.QueryRowContext(ctx, "UPDATE orders SET status = $2, accrual = $3 WHERE number = $1 RETURNING user_uuid", order.Number, order.Status, order.Accrual)
+
+	if err := row.Err(); err != nil {
+		return fmt.Errorf("cannot perform orders update: %w", err)
+	}
+
+	var userUUID string
+	if err := row.Scan(&userUUID); err != nil {
+		return fmt.Errorf("cannot scan user UUID: %w", err)
+	}
+
+	if _, err := tx.ExecContext(ctx, "UPDATE users SET current_balance = current_balance + $2 WHERE id = $1", userUUID, order.Accrual); err != nil {
+		return fmt.Errorf("cannot perform users update: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("cannot finish transaction: %w", err)
 	}
 
 	return nil
