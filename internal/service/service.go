@@ -16,8 +16,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const defaultDelay = time.Millisecond * 10
-
 var (
 	ErrLoginExists           = errors.New("login already exists")
 	ErrInvalidCredentials    = errors.New("invaldi credentials")
@@ -49,13 +47,27 @@ type service struct {
 	orderCfg      struct {
 		orderWorkers int
 		orderQueue   *syncqueue.SyncQueue[string]
-		orderWait    chan struct{}
 		orderCond    *sync.Cond
 	}
 }
 
-func NewService(r Repository) *service {
-	return &service{repository: r}
+func NewService(ctx context.Context, r Repository, a AccrualSystem, workers int) *service {
+	s := &service{
+		repository:    r,
+		accrualSystem: a,
+		orderCfg: struct {
+			orderWorkers int
+			orderQueue   *syncqueue.SyncQueue[string]
+			orderCond    *sync.Cond
+		}{
+			orderWorkers: workers,
+			orderQueue:   &syncqueue.SyncQueue[string]{},
+			orderCond:    &sync.Cond{},
+		}}
+
+	s.startWorkers(ctx)
+
+	return s
 }
 
 func (s *service) RegisterUser(ctx context.Context, login, password string) (models.User, error) {
@@ -109,6 +121,8 @@ func (s *service) AddOrder(ctx context.Context, uuid, order string) error {
 	} else if err != nil {
 		return fmt.Errorf("cannot add order to repository: %w", err)
 	}
+
+	s.pushOrder(order)
 
 	return nil
 }
@@ -225,8 +239,21 @@ func (s *service) updateOrder(ctx context.Context, order models.AccrualOrderStat
 			return fmt.Errorf("cannot update order status: %w", err)
 		}
 	case models.AccrualOrderStatusProcessing:
+		if err := s.repository.UpdateOrderStatus(ctx, order.Order, models.OrderStatusProcessing); err != nil {
+			return fmt.Errorf("cannot update order status: %w", err)
+		}
 	case models.AccrualOrderStatusInvalid:
+		if err := s.repository.UpdateOrderStatus(ctx, order.Order, models.OrderStatusInvalid); err != nil {
+			return fmt.Errorf("cannot update order status: %w", err)
+		}
 	case models.AccrualOrderStatusProcessed:
+		if err := s.repository.UpdateOrder(ctx, models.Order{
+			Accrual: order.Accrual,
+			Number:  order.Order,
+			Status:  models.OrderStatusProcessed,
+		}); err != nil {
+			return fmt.Errorf("cannot update order status: %w", err)
+		}
 	}
 
 	return nil
@@ -237,7 +264,7 @@ func (s *service) workerOrder(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case <-s.orderCfg.orderWait:
+		default:
 		}
 
 		number, ok := s.orderCfg.orderQueue.Pop()
