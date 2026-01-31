@@ -2,13 +2,14 @@ package handlers
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
 	"slices"
 	"strconv"
 
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 const userUUIDKey requestContextKey = 1
@@ -16,20 +17,27 @@ const userUUIDKey requestContextKey = 1
 type requestContextKey int
 
 type authClaims struct {
-	jwt.Claims
-	userUUID string
+	jwt.RegisteredClaims
+	UserUUID string
 }
 
 func (h *handlers) validateAuthCookie(ctx context.Context, tokenString string) (string, error) {
-	var claims authClaims
+	claims := &authClaims{}
 
-	token, err := jwt.ParseWithClaims(tokenString, &claims, func(t *jwt.Token) (any, error) {
-		c, ok := t.Claims.(authClaims)
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (any, error) {
+		c, ok := t.Claims.(*authClaims)
 		if !ok {
 			return nil, errors.New("cannot assert token claims")
 		}
 
-		return h.s.GetPasswordHash(ctx, c.userUUID)
+		fmt.Printf("%#v", c)
+
+		passHash, err := h.s.GetPasswordHash(ctx, c.UserUUID)
+		if err != nil {
+			return nil, fmt.Errorf("cannot get password hash: %w", err)
+		}
+
+		return hex.DecodeString(passHash)
 	})
 	if err != nil {
 		return "", fmt.Errorf("cannot parse JWT token: %w", err)
@@ -39,18 +47,13 @@ func (h *handlers) validateAuthCookie(ctx context.Context, tokenString string) (
 		return "", fmt.Errorf("token is not valid")
 	}
 
-	return claims.userUUID, nil
+	return claims.UserUUID, nil
 }
 
 func setAuthCookie(w http.ResponseWriter, passHash, uuid string) error {
-	claims := &authClaims{
-		userUUID: uuid,
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(passHash)
+	tokenString, err := signClaims(passHash, uuid)
 	if err != nil {
-		return fmt.Errorf("cannot sigh token: %w", err)
+		return err
 	}
 
 	cookie := &http.Cookie{
@@ -63,20 +66,38 @@ func setAuthCookie(w http.ResponseWriter, passHash, uuid string) error {
 	return nil
 }
 
+func signClaims(passHash string, uuid string) (string, error) {
+	hash, err := hex.DecodeString(passHash)
+	if err != nil {
+		return "", fmt.Errorf("cannot decode pass hash: %w", err)
+	}
+
+	claims := &authClaims{
+		UserUUID: uuid,
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString(hash)
+	if err != nil {
+		return "", fmt.Errorf("cannot sigh token: %w", err)
+	}
+	return tokenString, nil
+}
+
 func validateLuhn(number string) error {
 	runes := []rune(number)
 	slices.Reverse(runes)
 
 	sum := 0
 	for i, r := range runes {
-		if i%2 == 0 {
-			sum += i
-			continue
-		}
-
 		num, err := strconv.Atoi(string(r))
 		if err != nil {
 			return errors.New("non-digit character in number")
+		}
+
+		if i%2 == 0 {
+			sum += num
+			continue
 		}
 
 		num = num * 2
