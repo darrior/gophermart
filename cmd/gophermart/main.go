@@ -14,6 +14,8 @@ import (
 	"github.com/darrior/gophermart/internal/service"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 func main() {
