@@ -61,7 +61,7 @@ func NewService(ctx context.Context, r Repository, a AccrualSystem, workers int)
 			orderCond    *sync.Cond
 		}{
 			orderWorkers: workers,
-			orderQueue:   &syncqueue.SyncQueue[string]{},
+			orderQueue:   syncqueue.NewSyncQueue[string](),
 			orderCond:    &sync.Cond{},
 		}}
 
@@ -100,6 +100,8 @@ func (s *service) LoginUser(ctx context.Context, login, password string) (models
 	user, err := s.repository.GetUserByLogin(ctx, login)
 	if errors.Is(err, repository.ErrUserNotFound) {
 		return models.User{}, ErrInvalidCredentials
+	} else if err != nil {
+		return models.User{}, fmt.Errorf("cannot get user: %w", err)
 	}
 
 	passHash := getPasswordHash(password)
@@ -111,9 +113,9 @@ func (s *service) LoginUser(ctx context.Context, login, password string) (models
 }
 
 func (s *service) AddOrder(ctx context.Context, uuid, order string) error {
-	var order_exists *repository.ErrorOrderExists
-	if err := s.repository.AddOrder(ctx, uuid, order, time.Now()); errors.As(err, &order_exists) {
-		if order_exists.UUID == uuid {
+	var orderExists *repository.ErrorOrderExists
+	if err := s.repository.AddOrder(ctx, uuid, order, time.Now()); errors.As(err, &orderExists) {
+		if orderExists.UUID == uuid {
 			return ErrOrderAlreadyExists
 		} else {
 			return ErrOrderOwnedByOtherUser
@@ -151,7 +153,7 @@ func (s *service) ListOrders(ctx context.Context, uuid string) ([]models.OrderRe
 		return nil, fmt.Errorf("cannot get orders from repository: %w", err)
 	}
 
-	var ret []models.OrderResponse
+	ret := []models.OrderResponse{}
 	for _, order := range orders {
 		ret = append(ret, models.OrderResponse{
 			Number:     order.Number,
@@ -167,10 +169,10 @@ func (s *service) ListOrders(ctx context.Context, uuid string) ([]models.OrderRe
 func (s *service) ListWithdrawals(ctx context.Context, uuid string) ([]models.WithdrawResponse, error) {
 	withdrawals, err := s.repository.ListWithdrawals(ctx, uuid)
 	if err != nil {
-		return nil, fmt.Errorf("cannot get user from repository: %w", err)
+		return []models.WithdrawResponse{}, fmt.Errorf("cannot get user from repository: %w", err)
 	}
 
-	var ret []models.WithdrawResponse
+	ret := []models.WithdrawResponse{}
 	for _, withdrawal := range withdrawals {
 		ret = append(ret, models.WithdrawResponse{
 			Order:       withdrawal.Order,
