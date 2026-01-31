@@ -27,7 +27,7 @@ type rawConfig struct {
 var DefaultConfig = rawConfig{
 	RunAddress:           ":8080",
 	DatabaseURI:          "",
-	AccrualSystemAddress: "127.0.0.1:3000",
+	AccrualSystemAddress: "http://127.0.0.1:3000",
 }
 
 func ParseConfig() (Config, error) {
@@ -60,7 +60,7 @@ func validateConfig(r rawConfig) (Config, error) {
 		return Config{}, fmt.Errorf("DB URI is invalid: %w", err)
 	}
 
-	accrualAddr, err := ValidateAccrualAddr(r.AccrualSystemAddress)
+	accrualAddr, err := validateAccrualAddr(r.AccrualSystemAddress)
 	if err != nil {
 		return Config{}, fmt.Errorf("accrual address is invalid: %w", err)
 	}
@@ -90,7 +90,7 @@ func validateDBURI(dbURI string) (*pgx.ConnConfig, error) {
 	return connConf, nil
 }
 
-func ValidateAccrualAddr(accrualAddr string) (string, error) {
+func validateAccrualAddr(accrualAddr string) (string, error) {
 	url, err := url.Parse(accrualAddr)
 	if err != nil {
 		return "", fmt.Errorf("cannot parse url: %w", err)
