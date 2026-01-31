@@ -9,7 +9,10 @@ type SyncQueue[T any] struct {
 }
 
 func NewSyncQueue[T any]() *SyncQueue[T] {
-	return &SyncQueue[T]{}
+	return &SyncQueue[T]{
+		lock:  &sync.Mutex{},
+		queue: make([]T, 0),
+	}
 }
 
 func (s *SyncQueue[T]) Pop() (T, bool) {
