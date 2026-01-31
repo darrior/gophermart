@@ -130,7 +130,12 @@ func (h *handlers) postAPIUserOrders(w http.ResponseWriter, req *http.Request) {
 	}
 
 	ctx := req.Context()
-	uuid := rawUUID.(string)
+	uuid, ok := rawUUID.(string)
+	if !ok {
+		http.Error(w, "login is not string", http.StatusInternalServerError)
+		return
+	}
+
 	if err := h.s.AddOrder(ctx, uuid, order); errors.Is(err, service.ErrOrderAlreadyExists) {
 		w.WriteHeader(http.StatusOK)
 		return
@@ -153,7 +158,12 @@ func (h *handlers) getAPIUserOrders(w http.ResponseWriter, req *http.Request) {
 	}
 
 	ctx := req.Context()
-	uuid := rawUUID.(string)
+	uuid, ok := rawUUID.(string)
+	if !ok {
+		http.Error(w, "login is not string", http.StatusInternalServerError)
+		return
+	}
+
 	orders, err := h.s.ListOrders(ctx, uuid)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -187,7 +197,12 @@ func (h *handlers) getAPIUserBalance(w http.ResponseWriter, req *http.Request) {
 	}
 
 	ctx := req.Context()
-	uuid := rawUUID.(string)
+	uuid, ok := rawUUID.(string)
+	if !ok {
+		http.Error(w, "login is not string", http.StatusInternalServerError)
+		return
+	}
+
 	balance, err := h.s.GetBalance(ctx, uuid)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -208,7 +223,7 @@ func (h *handlers) getAPIUserBalance(w http.ResponseWriter, req *http.Request) {
 	_, _ = w.Write(data)
 }
 
-func (h *handlers) postAPIUserBalanceWithdrew(w http.ResponseWriter, req *http.Request) {
+func (h *handlers) postAPIUserBalanceWithdraw(w http.ResponseWriter, req *http.Request) {
 	if !strings.HasPrefix(req.Header.Get("content-type"), "application/json") {
 		http.Error(w, "invalid content-type", http.StatusBadRequest)
 		return
@@ -238,7 +253,11 @@ func (h *handlers) postAPIUserBalanceWithdrew(w http.ResponseWriter, req *http.R
 	}
 
 	ctx := req.Context()
-	uuid := rawUUID.(string)
+	uuid, ok := rawUUID.(string)
+	if !ok {
+		http.Error(w, "login is not string", http.StatusInternalServerError)
+	}
+
 	if err := h.s.Withdraw(ctx, uuid, data.Order, data.Sum); errors.Is(err, service.ErrInsufficientFunds) {
 		http.Error(w, err.Error(), http.StatusPaymentRequired)
 		return
@@ -257,8 +276,13 @@ func (h *handlers) getAPIUserWithdrawals(w http.ResponseWriter, req *http.Reques
 		return
 	}
 
+	uuid, ok := rawUUID.(string)
+	if !ok {
+		http.Error(w, "login is not string", http.StatusInternalServerError)
+		return
+	}
+
 	ctx := req.Context()
-	uuid := rawUUID.(string)
 	withdrawals, err := h.s.ListWithdrawals(ctx, uuid)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
