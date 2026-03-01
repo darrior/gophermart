@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/darrior/gophermart/internal/models"
+	"github.com/jmoiron/sqlx"
+	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -26,17 +28,19 @@ func (e *ErrorOrderExists) Error() string {
 }
 
 type repository struct {
-	db *sql.DB
+	db *sqlx.DB
 }
 
-func NewRepository(db *sql.DB) *repository {
+func NewRepository(db *sqlx.DB) *repository {
 	return &repository{
 		db: db,
 	}
 }
 
 func (r *repository) AddUser(ctx context.Context, uuid, login, passHash string) error {
-	if _, err := r.db.ExecContext(ctx, "INSERT INTO users (id, login, password_hash) VALUES ($1, $2, $3)", uuid, login, passHash); err != nil {
+	log.Info().Str("login", login).Msg("add user with login")
+
+	if _, err := r.db.ExecContext(ctx, "INSERT INTO users (id, login, password_hash, current_balance, withdrawan_balance) VALUES ($1, $2, $3, $4, $5)", uuid, login, passHash, 0.0, 0.0); err != nil {
 		return fmt.Errorf("cannot insert user: %w", err)
 	}
 
@@ -131,10 +135,10 @@ func (r *repository) GetOrder(ctx context.Context, number string) (models.Order,
 }
 
 func (r *repository) GetUser(ctx context.Context, uuid string) (models.User, error) {
-	row := r.db.QueryRowContext(ctx, "SELECT * FROM users WHERE id = $1", uuid)
+	row := r.db.QueryRowxContext(ctx, "SELECT * FROM users WHERE id = $1", uuid)
 
 	var user models.User
-	if err := row.Scan(&user); err != nil {
+	if err := row.StructScan(&user); err != nil {
 		return models.User{}, fmt.Errorf("cannot parse row: %w", err)
 	}
 
@@ -142,10 +146,12 @@ func (r *repository) GetUser(ctx context.Context, uuid string) (models.User, err
 }
 
 func (r *repository) GetUserByLogin(ctx context.Context, login string) (models.User, error) {
-	row := r.db.QueryRowContext(ctx, "SELECT * FROM users WHERE login = $1", login)
+	row := r.db.QueryRowxContext(ctx, "SELECT * FROM users WHERE login = $1", login)
 
 	var user models.User
-	if err := row.Scan(&user); err != nil {
+	if err := row.StructScan(&user); errors.Is(err, sql.ErrNoRows) {
+		return models.User{}, fmt.Errorf("%w: %w", ErrUserNotFound, err)
+	} else if err != nil {
 		return models.User{}, fmt.Errorf("cannot parse row: %w", err)
 	}
 
@@ -153,7 +159,7 @@ func (r *repository) GetUserByLogin(ctx context.Context, login string) (models.U
 }
 
 func (r *repository) ListOrders(ctx context.Context, uuid string) ([]models.Order, error) {
-	rows, err := r.db.QueryContext(ctx, "SELECT * FROM orders WHERE user_uuid = $1", uuid)
+	rows, err := r.db.QueryxContext(ctx, "SELECT * FROM orders WHERE user_uuid = $1", uuid)
 	if err != nil {
 		return nil, fmt.Errorf("cannot query rows: %w", err)
 	}
@@ -169,7 +175,7 @@ func (r *repository) ListOrders(ctx context.Context, uuid string) ([]models.Orde
 		}
 
 		var order models.Order
-		if err := rows.Scan(&order); err != nil {
+		if err := rows.StructScan(&order); err != nil {
 			errs = append(errs, err)
 			continue
 		}
@@ -185,7 +191,7 @@ func (r *repository) ListOrders(ctx context.Context, uuid string) ([]models.Orde
 }
 
 func (r *repository) ListWithdrawals(ctx context.Context, uuid string) ([]models.Withdrawal, error) {
-	rows, err := r.db.QueryContext(ctx, "SELECT * FROM withdrawals WHERE user_uuid = $1", uuid)
+	rows, err := r.db.QueryxContext(ctx, "SELECT * FROM withdrawals WHERE user_uuid = $1", uuid)
 	if err != nil {
 		return nil, fmt.Errorf("cannot query rows: %w", err)
 	}
@@ -201,7 +207,7 @@ func (r *repository) ListWithdrawals(ctx context.Context, uuid string) ([]models
 		}
 
 		var withdrawal models.Withdrawal
-		if err := rows.Scan(&withdrawal); err != nil {
+		if err := rows.StructScan(&withdrawal); err != nil {
 			errs = append(errs, err)
 			continue
 		}

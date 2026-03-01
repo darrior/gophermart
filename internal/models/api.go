@@ -1,7 +1,7 @@
 package models
 
 type AuthenticationDataRequest struct {
-	Login    string `json:"string"`
+	Login    string `json:"login"`
 	Password string `json:"password"`
 }
 

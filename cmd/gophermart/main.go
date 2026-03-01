@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"os/signal"
 	"syscall"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/darrior/gophermart/internal/repository"
 	"github.com/darrior/gophermart/internal/repository/migrations"
 	"github.com/darrior/gophermart/internal/service"
+	"github.com/jmoiron/sqlx"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
@@ -26,13 +26,13 @@ func main() {
 		log.Fatal().Err(err).Msg("Cannot parse config")
 	}
 
-	db, err := sql.Open("pgx", cfg.DatabaseConnConf.ConnString())
+	db, err := sqlx.Open("pgx", cfg.DatabaseConnConf.ConnString())
 	if err != nil {
 		log.Fatal().Err(err).Msg("Cannot open DB")
 	}
 
 	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT)
-	if err := migrations.Up(ctx, db); err != nil {
+	if err := migrations.Up(ctx, db.DB); err != nil {
 		log.Fatal().Err(err).Msg("Cannot migrate DB")
 	}
 
