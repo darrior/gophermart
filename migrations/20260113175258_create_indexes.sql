@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE UNIQUE INDEX unique_numbers ON orders (number);
-CREATE UNIQUE INDEX unique_logins ON users (logins);
+CREATE UNIQUE INDEX unique_logins ON users (login);
 -- +goose StatementEnd
 
 -- +goose Down

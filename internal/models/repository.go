@@ -30,7 +30,7 @@ type Order struct {
 type Withdrawal struct {
 	ID          int       `db:"id"`
 	UserUUID    string    `db:"user_uuid"`
-	Order       string    `db:"order"`
+	Order       string    `db:"order_number"`
 	Sum         float64   `db:"sum"`
 	ProcessedAt time.Time `db:"processed_at"`
 }

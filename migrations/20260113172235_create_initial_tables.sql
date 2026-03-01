@@ -1,26 +1,24 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE users(
-    id uuid NOT NULL,
+    id uuid NOT NULL PRIMARY KEY,
     login text,
     password_hash text,
     current_balance float,
-    withdrawan_balance float,
-    PRIMARY KEY(id)
+    withdrawan_balance float
 );
 CREATE TYPE order_status AS ENUM ('NEW', 'PROCESSING', 'INVALID', 'PROCESSED');
 CREATE TABLE orders(
-    number text,
+    number text PRIMARY KEY,
     accrual float,
     user_uuid uuid,
     status order_status,
-    uploaded_at timestamp,
-    PRIMARY KEY(number)
+    uploaded_at timestamp
 );
 CREATE TABLE withdrawals(
-    id SERIAL PRIMARY KEY ,
+    id SERIAL PRIMARY KEY,
     user_uuid uuid,
-    order text,
+    order_number text,
     sum float,
     processed_at timestamp
 );
