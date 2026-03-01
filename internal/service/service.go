@@ -300,6 +300,7 @@ func (s *service) workerOrder(ctx context.Context) {
 			continue
 		}
 
+		log.Info().Any("order", order).Msg("Get order")
 		if err := s.updateOrder(ctx, order); err != nil {
 			log.Error().Err(err).Msg("Cannot update order")
 		}

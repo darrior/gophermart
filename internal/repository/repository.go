@@ -59,7 +59,7 @@ func (r *repository) AddOrder(ctx context.Context, uuid, order string, timestamp
 		return fmt.Errorf("cannot parse row: %w", err)
 	}
 
-	if !(userUUID.Valid && uploadedAt.Valid) {
+	if !userUUID.Valid || !uploadedAt.Valid {
 		return nil
 	}
 
@@ -77,11 +77,11 @@ func (r *repository) AddWithdrawal(ctx context.Context, uuid, number string, bal
 		return fmt.Errorf("cannot start transaction: %w", err)
 	}
 
-	if _, err := tx.ExecContext(ctx, "UPDATE users SET current_balance = $1, withdrawal_balance = withdrawal_balance + $3 WHERE id = $2", balance, uuid, sum); err != nil {
+	if _, err := tx.ExecContext(ctx, "UPDATE users SET current_balance = $1, withdrawan_balance = withdrawan_balance + $3 WHERE id = $2", balance, uuid, sum); err != nil {
 		return fmt.Errorf("cannot update user: %w", err)
 	}
 
-	if _, err := tx.ExecContext(ctx, "INSERT INTO withdrawals (user_uuid, order, sum, processed_at) VALUES ($1, $2, $3, $4)", uuid, number, sum, time); err != nil {
+	if _, err := tx.ExecContext(ctx, "INSERT INTO withdrawals (user_uuid, order_number, sum, processed_at) VALUES ($1, $2, $3, $4)", uuid, number, sum, time); err != nil {
 		return fmt.Errorf("cannot add withdrawal: %w", err)
 	}
 

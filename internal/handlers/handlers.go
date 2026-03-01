@@ -264,6 +264,7 @@ func (h *handlers) postAPIUserBalanceWithdraw(w http.ResponseWriter, req *http.R
 		http.Error(w, err.Error(), http.StatusPaymentRequired)
 		return
 	} else if err != nil {
+		log.Error().Err(err).Msg("Cannot make withdraw")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
