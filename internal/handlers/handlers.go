@@ -172,6 +172,7 @@ func (h *handlers) getAPIUserOrders(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if len(orders) == 0 {
+		w.Header().Set("content-type", "application/json")
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
