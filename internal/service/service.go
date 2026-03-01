@@ -213,16 +213,7 @@ func (s *service) pushOrder(number string) {
 
 func (s *service) startWorkers(ctx context.Context) {
 	go func() {
-		t := time.NewTicker(60 * time.Second)
-
-	loop:
 		for {
-			select {
-			case <-ctx.Done():
-				break loop
-			case <-t.C:
-			}
-
 			wg := sync.WaitGroup{}
 
 			for range s.orderCfg.orderWorkers {
@@ -235,7 +226,12 @@ func (s *service) startWorkers(ctx context.Context) {
 			}
 
 			wg.Wait()
-			t.Reset(60 * time.Second)
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				time.Sleep(60 * time.Second)
+			}
 		}
 	}()
 }
@@ -278,12 +274,16 @@ func (s *service) workerOrder(ctx context.Context) {
 		number, ok := s.orderCfg.orderQueue.Pop()
 		if !ok {
 			s.orderCfg.orderCond.L.Lock()
+			log.Info().Msg("Wait for number in queue")
 			for s.orderCfg.orderQueue.IsEmpty() {
 				s.orderCfg.orderCond.Wait()
 			}
+			log.Info().Msg("Continue processing orders")
 			s.orderCfg.orderCond.L.Unlock()
 			continue
 		}
+
+		log.Info().Str("number", number).Msg("Start processing order")
 
 		order, err := s.accrualSystem.GetOrder(number)
 		if errors.Is(err, accrual.ErrTooManyRequests) {
