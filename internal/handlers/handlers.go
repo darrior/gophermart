@@ -123,7 +123,8 @@ func (h *handlers) postAPIUserOrders(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	order := string(data)
+	order := strings.TrimSpace(string(data))
+	log.Info().Str("order", order).Msg("Order received")
 	if err := validateLuhn(order); err != nil {
 		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 		return

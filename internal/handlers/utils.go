@@ -30,8 +30,6 @@ func (h *handlers) validateAuthCookie(ctx context.Context, tokenString string) (
 			return nil, errors.New("cannot assert token claims")
 		}
 
-		fmt.Printf("%#v", c)
-
 		passHash, err := h.s.GetPasswordHash(ctx, c.UserUUID)
 		if err != nil {
 			return nil, fmt.Errorf("cannot get password hash: %w", err)
