@@ -48,19 +48,24 @@ func (r *repository) AddUser(ctx context.Context, uuid, login, passHash string) 
 }
 
 func (r *repository) AddOrder(ctx context.Context, uuid, order string, timestamp time.Time) error {
-	row := r.db.QueryRowContext(ctx, "INSERT INTO orders (number, user_uuid, uploaded_at, accrual, status) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (number) DO UPDATE SET number = $1 RETURNING user_uuid, uploaded_at", order, uuid, timestamp, 0.0, models.OrderStatusNew)
+	row := r.db.QueryRowContext(ctx, "INSERT INTO orders (number, user_uuid, uploaded_at, accrual, status) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (number) DO UPDATE SET number = $1 RETURNING old.user_uuid, old.uploaded_at", order, uuid, timestamp.UTC(), 0.0, models.OrderStatusNew)
 
 	var (
-		userUUID   string
-		uploadedAt time.Time
+		userUUID   sql.NullString
+		uploadedAt sql.NullTime
 	)
 
 	if err := row.Scan(&userUUID, &uploadedAt); err != nil {
 		return fmt.Errorf("cannot parse row: %w", err)
 	}
 
-	if uploadedAt.Before(timestamp) || userUUID != uuid {
-		return &ErrorOrderExists{UUID: userUUID}
+	if !(userUUID.Valid && uploadedAt.Valid) {
+		return nil
+	}
+
+	log.Info().Str("old date", uploadedAt.Time.String()).Str("new date", timestamp.String()).Msg("Conflict occured")
+	if uploadedAt.Time.Before(timestamp) || userUUID.String != uuid {
+		return &ErrorOrderExists{UUID: userUUID.String}
 	}
 
 	return nil

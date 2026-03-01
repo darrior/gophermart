@@ -115,6 +115,7 @@ func (s *service) LoginUser(ctx context.Context, login, password string) (models
 func (s *service) AddOrder(ctx context.Context, uuid, order string) error {
 	var orderExists *repository.ErrorOrderExists
 	if err := s.repository.AddOrder(ctx, uuid, order, time.Now()); errors.As(err, &orderExists) {
+		log.Info().Err(err).Msg("Conflict number")
 		if orderExists.UUID == uuid {
 			return ErrOrderAlreadyExists
 		} else {
