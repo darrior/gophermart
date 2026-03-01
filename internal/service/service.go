@@ -225,7 +225,12 @@ func (s *service) startWorkers(ctx context.Context) {
 			wg := sync.WaitGroup{}
 
 			for range s.orderCfg.orderWorkers {
-				wg.Go(func() { s.workerOrder(ctx) })
+				wg.Add(1)
+
+				go func() {
+					s.workerOrder(ctx)
+					wg.Done()
+				}()
 			}
 
 			wg.Wait()
