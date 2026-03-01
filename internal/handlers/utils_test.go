@@ -104,6 +104,8 @@ func Test_setAuthCookie(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			defer func() { _ = tt.args.w.Result().Body.Close() }()
+
 			tt.assertion(t, setAuthCookie(tt.args.w, tt.args.passHash, tt.args.uuid))
 			assert.Equal(t, tt.want, len(tt.args.w.Result().Cookies()))
 		})
