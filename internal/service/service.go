@@ -269,6 +269,7 @@ func (s *service) workerOrder(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		default:
+			time.Sleep(time.Second)
 		}
 
 		number, ok := s.orderCfg.orderQueue.Pop()
@@ -288,9 +289,11 @@ func (s *service) workerOrder(ctx context.Context) {
 		order, err := s.accrualSystem.GetOrder(number)
 		if errors.Is(err, accrual.ErrTooManyRequests) {
 			s.orderCfg.orderQueue.Push(number)
+			log.Info().Msg("Too many request")
 			break
 		} else if errors.Is(err, accrual.ErrOrderIsNotExist) {
 			s.orderCfg.orderQueue.Push(number)
+			log.Info().Msg("Order does not exist")
 			continue
 		} else if err != nil {
 			log.Error().Err(err).Msg("An error occured in accrual system")
