@@ -48,7 +48,7 @@ func (r *repository) AddUser(ctx context.Context, uuid, login, passHash string) 
 }
 
 func (r *repository) AddOrder(ctx context.Context, uuid, order string, timestamp time.Time) error {
-	row := r.db.QueryRowContext(ctx, "INSERT INTO orders (number, user_uuid, uploaded_at) VALUES ($1, $2, $3) ON CONFLICT (number) DO UPDATE SET number = $1 RETURNING user_uuid, uploaded_at", order, uuid, timestamp)
+	row := r.db.QueryRowContext(ctx, "INSERT INTO orders (number, user_uuid, uploaded_at, accrual, status) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (number) DO UPDATE SET number = $1 RETURNING user_uuid, uploaded_at", order, uuid, timestamp, 0.0, models.OrderStatusNew)
 
 	var (
 		userUUID   string
