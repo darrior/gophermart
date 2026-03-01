@@ -182,10 +182,12 @@ func Test_handlers_postAPIUserRegister(t *testing.T) {
 				s: tt.fields.s,
 			}
 			h.postAPIUserRegister(tt.args.w, tt.args.req)
-			defer func() { _ = tt.args.w.Result().Body.Close() }()
+
+			response := tt.args.w.Result()
+			defer func() { _ = response.Body.Close() }()
 
 			assert.Equal(t, tt.want.code, tt.args.w.Code)
-			assert.Len(t, tt.args.w.Result().Cookies(), tt.want.cookiesNum)
+			assert.Len(t, response.Cookies(), tt.want.cookiesNum)
 		})
 	}
 }
@@ -333,10 +335,12 @@ func Test_handlers_postAPIUserLogin(t *testing.T) {
 				s: tt.fields.s,
 			}
 			h.postAPIUserLogin(tt.args.w, tt.args.req)
-			defer func() { _ = tt.args.w.Result().Body.Close() }()
+
+			response := tt.args.w.Result()
+			defer func() { _ = response.Body.Close() }()
 
 			assert.Equal(t, tt.want.code, tt.args.w.Code)
-			assert.Len(t, tt.args.w.Result().Cookies(), tt.want.cookieNum)
+			assert.Len(t, response.Cookies(), tt.want.cookieNum)
 		})
 	}
 }
