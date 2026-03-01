@@ -62,7 +62,7 @@ func NewService(ctx context.Context, r Repository, a AccrualSystem, workers int)
 		}{
 			orderWorkers: workers,
 			orderQueue:   syncqueue.NewSyncQueue[string](),
-			orderCond:    &sync.Cond{},
+			orderCond:    sync.NewCond(&sync.Mutex{}),
 		}}
 
 	s.startWorkers(ctx)
