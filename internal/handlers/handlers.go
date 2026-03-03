@@ -106,6 +106,13 @@ func (h *handlers) postAPIUserOrders(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	ctx := req.Context()
+	uuid, err := getUUIDFromContext(ctx)
+	if err != nil {
+		http.Error(w, "authentication error", http.StatusInternalServerError)
+		return
+	}
+
 	data, err := io.ReadAll(req.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -117,23 +124,10 @@ func (h *handlers) postAPIUserOrders(w http.ResponseWriter, req *http.Request) {
 		}
 	}()
 
-	rawUUID := req.Context().Value(userUUIDKey)
-	if rawUUID == nil {
-		http.Error(w, "cannot find login", http.StatusInternalServerError)
-		return
-	}
-
 	order := strings.TrimSpace(string(data))
 	log.Info().Str("order", order).Msg("Order received")
 	if err := validateLuhn(order); err != nil {
 		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
-		return
-	}
-
-	ctx := req.Context()
-	uuid, ok := rawUUID.(string)
-	if !ok {
-		http.Error(w, "login is not string", http.StatusInternalServerError)
 		return
 	}
 
@@ -152,16 +146,10 @@ func (h *handlers) postAPIUserOrders(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h *handlers) getAPIUserOrders(w http.ResponseWriter, req *http.Request) {
-	rawUUID := req.Context().Value(userUUIDKey)
-	if rawUUID == nil {
-		http.Error(w, "cannot find login", http.StatusInternalServerError)
-		return
-	}
-
 	ctx := req.Context()
-	uuid, ok := rawUUID.(string)
-	if !ok {
-		http.Error(w, "login is not string", http.StatusInternalServerError)
+	uuid, err := getUUIDFromContext(ctx)
+	if err != nil {
+		http.Error(w, "authentication error", http.StatusInternalServerError)
 		return
 	}
 
@@ -192,16 +180,10 @@ func (h *handlers) getAPIUserOrders(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h *handlers) getAPIUserBalance(w http.ResponseWriter, req *http.Request) {
-	rawUUID := req.Context().Value(userUUIDKey)
-	if rawUUID == nil {
-		http.Error(w, "cannot find login", http.StatusInternalServerError)
-		return
-	}
-
 	ctx := req.Context()
-	uuid, ok := rawUUID.(string)
-	if !ok {
-		http.Error(w, "login is not string", http.StatusInternalServerError)
+	uuid, err := getUUIDFromContext(ctx)
+	if err != nil {
+		http.Error(w, "authentication error", http.StatusInternalServerError)
 		return
 	}
 
@@ -248,16 +230,11 @@ func (h *handlers) postAPIUserBalanceWithdraw(w http.ResponseWriter, req *http.R
 		return
 	}
 
-	rawUUID := req.Context().Value(userUUIDKey)
-	if rawUUID == nil {
-		http.Error(w, "cannot find login", http.StatusInternalServerError)
-		return
-	}
-
 	ctx := req.Context()
-	uuid, ok := rawUUID.(string)
-	if !ok {
-		http.Error(w, "login is not string", http.StatusInternalServerError)
+	uuid, err := getUUIDFromContext(ctx)
+	if err != nil {
+		http.Error(w, "authentication error", http.StatusInternalServerError)
+		return
 	}
 
 	if err := h.s.Withdraw(ctx, uuid, data.Order, data.Sum); errors.Is(err, service.ErrInsufficientFunds) {
@@ -273,19 +250,13 @@ func (h *handlers) postAPIUserBalanceWithdraw(w http.ResponseWriter, req *http.R
 }
 
 func (h *handlers) getAPIUserWithdrawals(w http.ResponseWriter, req *http.Request) {
-	rawUUID := req.Context().Value(userUUIDKey)
-	if rawUUID == nil {
-		http.Error(w, "cannot find login", http.StatusInternalServerError)
-		return
-	}
-
-	uuid, ok := rawUUID.(string)
-	if !ok {
-		http.Error(w, "login is not string", http.StatusInternalServerError)
-		return
-	}
-
 	ctx := req.Context()
+	uuid, err := getUUIDFromContext(ctx)
+	if err != nil {
+		http.Error(w, "authentication error", http.StatusInternalServerError)
+		return
+	}
+
 	withdrawals, err := h.s.ListWithdrawals(ctx, uuid)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

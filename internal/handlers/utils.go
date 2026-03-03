@@ -112,3 +112,17 @@ func validateLuhn(number string) error {
 
 	return nil
 }
+
+func getUUIDFromContext(ctx context.Context) (string, error) {
+	rawUUID := ctx.Value(userUUIDKey)
+	if rawUUID == nil {
+		return "", errors.New("cannot get UUID from context")
+	}
+
+	uuid, ok := rawUUID.(string)
+	if !ok {
+		return "", errors.New("cannot convert UUID to string")
+	}
+
+	return uuid, nil
+}

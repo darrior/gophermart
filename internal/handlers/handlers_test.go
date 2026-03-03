@@ -676,7 +676,7 @@ func Test_handlers_getAPIUserOrders(t *testing.T) {
 			},
 			want: want{
 				code: http.StatusInternalServerError,
-				data: []byte("cannot find login\n"),
+				data: []byte("authentication error\n"),
 			},
 		},
 		{
@@ -695,7 +695,7 @@ func Test_handlers_getAPIUserOrders(t *testing.T) {
 			},
 			want: want{
 				code: http.StatusInternalServerError,
-				data: []byte("login is not string\n"),
+				data: []byte("authentication error\n"),
 			},
 		},
 	}
@@ -808,7 +808,7 @@ func Test_handlers_getAPIUserBalance(t *testing.T) {
 			},
 			want: want{
 				code: http.StatusInternalServerError,
-				data: []byte("login is not string\n"),
+				data: []byte("authentication error\n"),
 			},
 		},
 		{
@@ -826,7 +826,7 @@ func Test_handlers_getAPIUserBalance(t *testing.T) {
 			},
 			want: want{
 				code: http.StatusInternalServerError,
-				data: []byte("cannot find login\n"),
+				data: []byte("authentication error\n"),
 			},
 		},
 	}
@@ -1123,11 +1123,11 @@ func Test_handlers_getAPIUserWithdrawals(t *testing.T) {
 			},
 			want: want{
 				code: http.StatusInternalServerError,
-				data: []byte("cannot find login\n"),
+				data: []byte("authentication error\n"),
 			},
 		},
 		{
-			name: "Login is not string",
+			name: "authentication error",
 			fields: fields{
 				s: s,
 			},
@@ -1142,7 +1142,7 @@ func Test_handlers_getAPIUserWithdrawals(t *testing.T) {
 			},
 			want: want{
 				code: http.StatusInternalServerError,
-				data: []byte("login is not string\n"),
+				data: []byte("authentication error\n"),
 			},
 		},
 	}
