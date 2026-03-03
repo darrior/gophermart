@@ -658,7 +658,7 @@ func Test_handlers_getAPIUserOrders(t *testing.T) {
 			},
 			want: want{
 				code: http.StatusInternalServerError,
-				data: []byte("\n"),
+				data: []byte(http.StatusText(http.StatusInternalServerError) + "\n"),
 			},
 		},
 		{
@@ -676,7 +676,7 @@ func Test_handlers_getAPIUserOrders(t *testing.T) {
 			},
 			want: want{
 				code: http.StatusInternalServerError,
-				data: []byte("authentication error\n"),
+				data: []byte(http.StatusText(http.StatusInternalServerError) + "\n"),
 			},
 		},
 		{
@@ -695,7 +695,7 @@ func Test_handlers_getAPIUserOrders(t *testing.T) {
 			},
 			want: want{
 				code: http.StatusInternalServerError,
-				data: []byte("authentication error\n"),
+				data: []byte(http.StatusText(http.StatusInternalServerError) + "\n"),
 			},
 		},
 	}
@@ -789,7 +789,7 @@ func Test_handlers_getAPIUserBalance(t *testing.T) {
 			},
 			want: want{
 				code: http.StatusInternalServerError,
-				data: []byte("\n"),
+				data: []byte(http.StatusText(http.StatusInternalServerError) + "\n"),
 			},
 		},
 		{
@@ -808,7 +808,7 @@ func Test_handlers_getAPIUserBalance(t *testing.T) {
 			},
 			want: want{
 				code: http.StatusInternalServerError,
-				data: []byte("authentication error\n"),
+				data: []byte(http.StatusText(http.StatusInternalServerError) + "\n"),
 			},
 		},
 		{
@@ -826,7 +826,7 @@ func Test_handlers_getAPIUserBalance(t *testing.T) {
 			},
 			want: want{
 				code: http.StatusInternalServerError,
-				data: []byte("authentication error\n"),
+				data: []byte(http.StatusText(http.StatusInternalServerError) + "\n"),
 			},
 		},
 	}
@@ -1123,11 +1123,11 @@ func Test_handlers_getAPIUserWithdrawals(t *testing.T) {
 			},
 			want: want{
 				code: http.StatusInternalServerError,
-				data: []byte("authentication error\n"),
+				data: []byte(http.StatusText(http.StatusInternalServerError) + "\n"),
 			},
 		},
 		{
-			name: "authentication error",
+			name: "Authentication error",
 			fields: fields{
 				s: s,
 			},
@@ -1142,7 +1142,7 @@ func Test_handlers_getAPIUserWithdrawals(t *testing.T) {
 			},
 			want: want{
 				code: http.StatusInternalServerError,
-				data: []byte("authentication error\n"),
+				data: []byte(http.StatusText(http.StatusInternalServerError) + "\n"),
 			},
 		},
 	}
