@@ -9,7 +9,6 @@ import (
 	"github.com/darrior/gophermart/internal/gateways/accrual"
 	"github.com/darrior/gophermart/internal/handlers"
 	"github.com/darrior/gophermart/internal/repository"
-	"github.com/darrior/gophermart/internal/repository/migrations"
 	"github.com/darrior/gophermart/internal/service"
 	"github.com/jmoiron/sqlx"
 	"github.com/rs/zerolog"
@@ -21,6 +20,8 @@ import (
 func main() {
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 
+	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT)
+
 	cfg, err := config.ParseConfig()
 	if err != nil {
 		log.Fatal().Err(err).Msg("Cannot parse config")
@@ -30,13 +31,17 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("Cannot open DB")
 	}
+	go func() {
+		<-ctx.Done()
+		if err := db.Close(); err != nil {
+			log.Error().Err(err).Msg("cannot close DB connection")
+		}
+	}()
 
-	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT)
-	if err := migrations.Up(ctx, db.DB); err != nil {
-		log.Fatal().Err(err).Msg("Cannot migrate DB")
+	r, err := repository.NewRepository(ctx, db)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Cannot initialize repository")
 	}
-
-	r := repository.NewRepository(db)
 
 	a := accrual.NewAccrual(cfg.AccrualSystemAddress)
 	s := service.NewService(ctx, r, a, 5)

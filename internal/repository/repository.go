@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/darrior/gophermart/internal/models"
+	"github.com/darrior/gophermart/internal/repository/migrations"
 	"github.com/jmoiron/sqlx"
 	"github.com/rs/zerolog/log"
 )
@@ -31,10 +32,14 @@ type repository struct {
 	db *sqlx.DB
 }
 
-func NewRepository(db *sqlx.DB) *repository {
+func NewRepository(ctx context.Context, db *sqlx.DB) (*repository, error) {
+	if err := migrations.Up(ctx, db.DB); err != nil {
+		return nil, fmt.Errorf("cannot migrate db: %w", err)
+	}
+
 	return &repository{
 		db: db,
-	}
+	}, nil
 }
 
 func (r *repository) AddUser(ctx context.Context, uuid, login, passHash string) error {
