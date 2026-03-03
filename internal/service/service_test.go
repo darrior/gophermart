@@ -4,14 +4,12 @@ package service
 import (
 	"context"
 	"errors"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/darrior/gophermart/internal/mocks"
 	"github.com/darrior/gophermart/internal/models"
 	"github.com/darrior/gophermart/internal/repository"
-	"github.com/darrior/gophermart/internal/utils/syncqueue"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -46,12 +44,8 @@ func TestNewService(t *testing.T) {
 				accrualSystem: a,
 				orderCfg: struct {
 					orderWorkers int
-					orderQueue   *syncqueue.SyncQueue[string]
-					orderCond    *sync.Cond
 				}{
 					orderWorkers: 5,
-					orderQueue:   &syncqueue.SyncQueue[string]{},
-					orderCond:    &sync.Cond{},
 				},
 			},
 		},

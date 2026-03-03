@@ -144,6 +144,21 @@ func (mr *MockRepositoryMockRecorder) ListOrders(ctx, uuid any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListOrders", reflect.TypeOf((*MockRepository)(nil).ListOrders), ctx, uuid)
 }
 
+// ListProcessingOrdersNumbers mocks base method.
+func (m *MockRepository) ListProcessingOrdersNumbers(ctx context.Context) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListProcessingOrdersNumbers", ctx)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListProcessingOrdersNumbers indicates an expected call of ListProcessingOrdersNumbers.
+func (mr *MockRepositoryMockRecorder) ListProcessingOrdersNumbers(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListProcessingOrdersNumbers", reflect.TypeOf((*MockRepository)(nil).ListProcessingOrdersNumbers), ctx)
+}
+
 // ListWithdrawals mocks base method.
 func (m *MockRepository) ListWithdrawals(ctx context.Context, uuid string) ([]models.Withdrawal, error) {
 	m.ctrl.T.Helper()

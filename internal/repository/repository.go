@@ -200,6 +200,38 @@ func (r *repository) ListOrders(ctx context.Context, uuid string) ([]models.Orde
 	return orders, nil
 }
 
+func (r *repository) ListProcessingOrdersNumbers(ctx context.Context) ([]string, error) {
+	rows, err := r.db.QueryContext(ctx, "SELECT number FROM orders WHERE status = 'NEW' OR status = 'PROCESSING' ORDER BY uploaded_at ASC LIMIT 100")
+	if err != nil {
+		return []string{}, fmt.Errorf("cannot query rows: %w", err)
+	}
+
+	var (
+		numbers []string
+		errs    []error
+	)
+	for rows.Next() {
+		if err := rows.Err(); err != nil {
+			errs = append(errs, fmt.Errorf("error in row: %w", err))
+			continue
+		}
+
+		var number string
+		if err := rows.Scan(&number); err != nil {
+			errs = append(errs, fmt.Errorf("cannot scan value: %w", err))
+			continue
+		}
+
+		numbers = append(numbers, number)
+	}
+
+	if len(errs) != 0 {
+		return []string{}, errors.Join(errs...)
+	}
+
+	return numbers, nil
+}
+
 func (r *repository) ListWithdrawals(ctx context.Context, uuid string) ([]models.Withdrawal, error) {
 	rows, err := r.db.QueryxContext(ctx, "SELECT * FROM withdrawals WHERE user_uuid = $1", uuid)
 	if err != nil {

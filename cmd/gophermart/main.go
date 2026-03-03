@@ -45,9 +45,19 @@ func main() {
 
 	a := accrual.NewAccrual(cfg.AccrualSystemAddress)
 	s := service.NewService(ctx, r, a, 5)
+
+	done := make(chan struct{})
+
+	go func() {
+		s.StartWorkers(ctx)
+		close(done)
+	}()
+
 	srv := handlers.NewServer(cfg.RunAddress, s)
 
 	if err := srv.Start(ctx); err != nil {
 		log.Error().Err(err).Msg("Unexpected shutdown of server")
 	}
+
+	<-done
 }

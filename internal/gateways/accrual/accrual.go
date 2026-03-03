@@ -18,6 +18,12 @@ var (
 	ErrServerError     = errors.New("internal server error")
 )
 
+type ErrorTooManyRequests struct {
+	RetryAfter time.Duration
+}
+func (e ErrorTooManyRequests) Error() string {
+	return fmt.Sprintf("too many requests; retry after %d", e.RetryAfter)
+}
 type accrual struct {
 	client  *http.Client
 	baseURL string
@@ -45,7 +51,11 @@ func (a *accrual) GetOrder(number string) (models.AccrualOrderState, error) {
 	case http.StatusNoContent:
 		return models.AccrualOrderState{}, ErrOrderIsNotExist
 	case http.StatusTooManyRequests:
-		return models.AccrualOrderState{}, ErrTooManyRequests
+		retry, err := strconv.Atoi(resp.Header.Get("retry-after"))
+		if err != nil {
+			return models.AccrualOrderState{}, ErrorTooManyRequests{RetryAfter: time.Minute}
+		}
+		return models.AccrualOrderState{}, &ErrorTooManyRequests{RetryAfter: time.Duration(retry) * time.Second}
 	case http.StatusInternalServerError:
 		return models.AccrualOrderState{}, ErrServerError
 	}
