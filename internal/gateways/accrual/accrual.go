@@ -7,13 +7,15 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
+	"time"
 
 	"github.com/darrior/gophermart/internal/models"
+	"github.com/darrior/gophermart/internal/utils/client"
 	"github.com/rs/zerolog/log"
 )
 
 var (
-	ErrTooManyRequests = errors.New("too many requests")
 	ErrOrderIsNotExist = errors.New("order is not registered yet")
 	ErrServerError     = errors.New("internal server error")
 )
@@ -21,17 +23,23 @@ var (
 type ErrorTooManyRequests struct {
 	RetryAfter time.Duration
 }
+
 func (e ErrorTooManyRequests) Error() string {
 	return fmt.Sprintf("too many requests; retry after %d", e.RetryAfter)
 }
+
+type getter interface {
+	Get(url string) (*http.Response, error)
+}
+
 type accrual struct {
-	client  *http.Client
+	client  getter
 	baseURL string
 }
 
 func NewAccrual(address string) *accrual {
 	return &accrual{
-		client:  &http.Client{},
+		client:  client.NewRetryableClient(),
 		baseURL: address,
 	}
 }
