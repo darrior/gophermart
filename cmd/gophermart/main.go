@@ -20,7 +20,9 @@ import (
 func main() {
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 
-	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT)
+	_ctx, cancel := context.WithCancel(context.Background())
+	ctx, _ := signal.NotifyContext(_ctx, syscall.SIGINT)
+	defer cancel()
 
 	cfg, err := config.ParseConfig()
 	if err != nil {
