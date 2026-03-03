@@ -12,7 +12,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-const userUUIDKey requestContextKey = 1
+const userUUIDKey requestContextKey = iota
 
 type requestContextKey int
 
