@@ -11,6 +11,7 @@ import (
 	"github.com/darrior/gophermart/internal/gateways/accrual"
 	"github.com/darrior/gophermart/internal/models"
 	"github.com/darrior/gophermart/internal/repository"
+	"github.com/darrior/gophermart/internal/utils/atomic"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )
@@ -46,6 +47,7 @@ type service struct {
 	accrualSystem AccrualSystem
 	orderCfg      struct {
 		orderWorkers int
+		sleepUntil   atomic.GenericValue[time.Time]
 	}
 }
 
@@ -55,8 +57,10 @@ func NewService(ctx context.Context, r Repository, a AccrualSystem, workers int)
 		accrualSystem: a,
 		orderCfg: struct {
 			orderWorkers int
+			sleepUntil   atomic.GenericValue[time.Time]
 		}{
 			orderWorkers: workers,
+			sleepUntil:   atomic.GenericValue[time.Time](atomic.NewGenericValue(time.Now())),
 		}}
 
 	return s
@@ -198,15 +202,14 @@ func (s *service) GetPasswordHash(ctx context.Context, uuid string) (string, err
 
 func (s *service) StartWorkers(ctx context.Context) {
 	wg := sync.WaitGroup{}
-	numbers := make(chan string)
-	t := time.NewTicker(1)
+	numbers := make(chan string, s.orderCfg.orderWorkers)
 
 	for range s.orderCfg.orderWorkers {
 		wg.Add(1)
 
 		go func() {
 			defer wg.Done()
-			s.worker(ctx, t, numbers)
+			s.worker(ctx, numbers)
 		}()
 	}
 
@@ -231,7 +234,6 @@ loop:
 	}
 	close(numbers)
 	wg.Wait()
-	t.Stop()
 }
 
 func (s *service) updateOrder(ctx context.Context, order models.AccrualOrderState) error {
@@ -261,35 +263,36 @@ func (s *service) updateOrder(ctx context.Context, order models.AccrualOrderStat
 	return nil
 }
 
-func (s *service) worker(ctx context.Context, t *time.Ticker, numbers <-chan string) {
+func (s *service) worker(ctx context.Context, numbers <-chan string) {
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-t.C:
-			t.Reset(1)
-			number, ok := <-numbers
+		case number, ok := <-numbers:
 			if !ok {
 				return
+			}
+
+			sleepUntil := s.orderCfg.sleepUntil.Load()
+			if time.Now().Before(sleepUntil) {
+				time.Sleep(time.Until(sleepUntil))
 			}
 
 			log.Info().Str("number", number).Msg("Start processing order")
 
 			order, err := s.accrualSystem.GetOrder(number)
 
-			errTooManyRequsts := &accrual.ErrorTooManyRequests{}
+			var errTooManyRequsts *accrual.ErrorTooManyRequests
 
 			if errors.As(err, &errTooManyRequsts) {
 				log.Info().Msg("Too many request")
-				t.Reset(errTooManyRequsts.RetryAfter)
+				s.orderCfg.sleepUntil.Store(time.Now().Add(errTooManyRequsts.RetryAfter))
 				continue
 			} else if errors.Is(err, accrual.ErrOrderIsNotExist) {
 				log.Info().Msg("Order does not exist")
-				time.Sleep(time.Second)
 				continue
 			} else if err != nil {
 				log.Error().Err(err).Msg("An error occured in accrual system")
-				time.Sleep(time.Second)
 				continue
 			}
 
