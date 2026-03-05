@@ -54,13 +54,13 @@ func (h *handlers) postAPIUserRegister(w http.ResponseWriter, req *http.Request)
 		http.Error(w, err.Error(), http.StatusConflict)
 		return
 	} else if err != nil {
-		log.Error().Err(err).Msg("Internal server error")
+		log.Error().Err(err).Msg("Cannot register user")
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
 	if err := setAuthCookie(w, user.PasswordHash, user.UUID); err != nil {
-		log.Error().Err(err).Msg("Internal server error")
+		log.Error().Err(err).Msg("Cannot set auth cookie")
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	}
 
@@ -91,13 +91,13 @@ func (h *handlers) postAPIUserLogin(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	} else if err != nil {
-		log.Error().Err(err).Msg("Internal server error")
+		log.Error().Err(err).Msg("Cannot login user")
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
 	if err := setAuthCookie(w, user.PasswordHash, user.UUID); err != nil {
-		log.Error().Err(err).Msg("Internal server error")
+		log.Error().Err(err).Msg("Cannot set auth cookie")
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	}
 
@@ -113,7 +113,7 @@ func (h *handlers) postAPIUserOrders(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	uuid, err := getUUIDFromContext(ctx)
 	if err != nil {
-		log.Error().Err(err).Msg("Internal server error")
+		log.Error().Err(err).Msg("Cannot get UUID from context")
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -143,7 +143,7 @@ func (h *handlers) postAPIUserOrders(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusConflict)
 		return
 	} else if err != nil {
-		log.Error().Err(err).Msg("Internal server error")
+		log.Error().Err(err).Msg("Cannot add order")
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -155,14 +155,14 @@ func (h *handlers) getAPIUserOrders(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	uuid, err := getUUIDFromContext(ctx)
 	if err != nil {
-		log.Error().Err(err).Msg("Internal server error")
+		log.Error().Err(err).Msg("Cannot get UUID from context")
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
 	orders, err := h.s.ListOrders(ctx, uuid)
 	if err != nil {
-		log.Error().Err(err).Msg("Internal server error")
+		log.Error().Err(err).Msg("Cannot list orders")
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -175,7 +175,7 @@ func (h *handlers) getAPIUserOrders(w http.ResponseWriter, req *http.Request) {
 
 	data, err := json.Marshal(orders)
 	if err != nil {
-		log.Error().Err(err).Msg("Internal server error")
+		log.Error().Err(err).Msg("Cannot marshal JSON")
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -192,21 +192,21 @@ func (h *handlers) getAPIUserBalance(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	uuid, err := getUUIDFromContext(ctx)
 	if err != nil {
-		log.Error().Err(err).Msg("Internal server error")
+		log.Error().Err(err).Msg("Cannot get UUID from context")
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
 	balance, err := h.s.GetBalance(ctx, uuid)
 	if err != nil {
-		log.Error().Err(err).Msg("Internal server error")
+		log.Error().Err(err).Msg("Cannot get balance")
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
 	data, err := json.Marshal(balance)
 	if err != nil {
-		log.Error().Err(err).Msg("Internal server error")
+		log.Error().Err(err).Msg("Cannot marshal JSON")
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -245,7 +245,7 @@ func (h *handlers) postAPIUserBalanceWithdraw(w http.ResponseWriter, req *http.R
 	ctx := req.Context()
 	uuid, err := getUUIDFromContext(ctx)
 	if err != nil {
-		log.Error().Err(err).Msg("Internal server error")
+		log.Error().Err(err).Msg("Cannot get UUID from context")
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -255,7 +255,6 @@ func (h *handlers) postAPIUserBalanceWithdraw(w http.ResponseWriter, req *http.R
 		return
 	} else if err != nil {
 		log.Error().Err(err).Msg("Cannot make withdraw")
-		log.Error().Err(err).Msg("Internal server error")
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -267,14 +266,14 @@ func (h *handlers) getAPIUserWithdrawals(w http.ResponseWriter, req *http.Reques
 	ctx := req.Context()
 	uuid, err := getUUIDFromContext(ctx)
 	if err != nil {
-		log.Error().Err(err).Msg("Internal server error")
+		log.Error().Err(err).Msg("Cannot get UUID from context")
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
 	withdrawals, err := h.s.ListWithdrawals(ctx, uuid)
 	if err != nil {
-		log.Error().Err(err).Msg("Internal server error")
+		log.Error().Err(err).Msg("Cannot get withdrawals list")
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -286,7 +285,7 @@ func (h *handlers) getAPIUserWithdrawals(w http.ResponseWriter, req *http.Reques
 
 	data, err := json.Marshal(withdrawals)
 	if err != nil {
-		log.Error().Err(err).Msg("Internal server error")
+		log.Error().Err(err).Msg("Cannot marshal JSON")
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
