@@ -24,6 +24,12 @@ type ErrorTooManyRequests struct {
 	RetryAfter time.Duration
 }
 
+func newErrorTooManyRequests(duration time.Duration) ErrorTooManyRequests {
+	return ErrorTooManyRequests{
+		RetryAfter: duration,
+	}
+}
+
 func (e ErrorTooManyRequests) Error() string {
 	return fmt.Sprintf("too many requests; retry after %d", e.RetryAfter)
 }
@@ -61,9 +67,9 @@ func (a *accrual) GetOrder(number string) (models.AccrualOrderState, error) {
 	case http.StatusTooManyRequests:
 		retry, err := strconv.Atoi(resp.Header.Get("retry-after"))
 		if err != nil {
-			return models.AccrualOrderState{}, ErrorTooManyRequests{RetryAfter: time.Minute}
+			return models.AccrualOrderState{}, newErrorTooManyRequests(time.Minute)
 		}
-		return models.AccrualOrderState{}, &ErrorTooManyRequests{RetryAfter: time.Duration(retry) * time.Second}
+		return models.AccrualOrderState{}, newErrorTooManyRequests(time.Duration(retry) * time.Second)
 	case http.StatusInternalServerError:
 		return models.AccrualOrderState{}, ErrServerError
 	}
